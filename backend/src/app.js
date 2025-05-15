@@ -3,6 +3,8 @@ import cookieParser from 'cookie-parser';
 import dotenv  from 'dotenv';
 import connectDB from './config/db.js'; 
 import authRoutes from './routes/authRoutes.js'
+import campaignRoutes from './routes/campaignRoutes.js';
+import adRoutes from './routes/adRoutes.js';
 import cors from 'cors';
 
 const app = express();
@@ -22,7 +24,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth',authRoutes);
-
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/ads', adRoutes);
 const startServer = async () => {
   try {
     await connectDB();

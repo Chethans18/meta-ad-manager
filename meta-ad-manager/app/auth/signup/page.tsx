@@ -13,10 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { api } from "@/lib/axios"
+import  api  from "@/lib/axios"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/context/auth-context"
 
 export default function SignUpPage() {
   const router = useRouter()
+  const { setUser } = useAuth()
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -94,15 +97,34 @@ export default function SignUpPage() {
 
     setIsLoading(true)
 
-      try {
-    const response = await api.post("/auth/signup", {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-    })
-    console.log(response);
-      router.push("/auth/verify-email")
+    try {
+      const response = await api.post("/auth/signup", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      })
+      
+      console.log("Signup API Response:", response.data);
+      
+      // Get user data and token from response
+      const { token, user: userData } = response.data;
+      
+      if (token) {
+        // Store token and set in api defaults
+        localStorage.setItem('token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Update auth context with user data
+        if (userData) {
+          setUser(userData);
+        }
+
+        console.log("Signup successful:", response.data);
+        router.push("/auth/verify-email");
+      } else {
+        throw new Error("No token received from signup");
+      }
     } catch (error) {
       console.error("Signup error:", error)
       setErrors({ form: "An error occurred during signup. Please try again." })

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 const AuthContext = createContext();
 
@@ -12,54 +12,54 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // to handle initial state
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
       if (token) {
-        fetchUserData(token); // fetch user data from backend if token exists
+        // Set the token in api defaults
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        fetchUserData(token);
       } else {
-        setLoading(false); // no token, no need to fetch user
+        setLoading(false);
       }
     }
   }, []);
 
-  // fetching user data using the token
   const fetchUserData = async (token) => {
     try {
-      console.log("Fetching user data with token:", token); // Debug log
-      const res = await axios.get('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log("User data received:", res.data); // Debug log
-      setUser(res.data.user);
+      console.log("Fetching user data with token:", token);
+      const res = await api.get('/auth/me');
+      console.log("User data received:", res.data);
+      setUser(res.data.user || res.data);
     } catch (err) {
       console.error("Error fetching user data:", err);
       setUser(null);
       localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
     }
   };
 
-  // Login function
   const login = (userData, token) => {
-    console.log("Login called with:", { userData, token }); // Debug log
+    console.log("Login called with:", { userData, token });
     if (!token) {
       console.error("No token provided during login");
       return;
     }
     setUser(userData);
     localStorage.setItem('token', token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     router.push('/');
   };
 
-  // Logout function
   const logout = () => {
     setUser(null);
     localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
     router.push('/auth/signin');
   };
 

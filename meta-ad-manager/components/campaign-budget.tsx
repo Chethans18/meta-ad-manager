@@ -14,13 +14,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export function CampaignBudget() {
+interface CampaignBudgetProps {
+  onUpdate: (data: { budget: number; budgetType: string }) => void
+}
+
+export function CampaignBudget({ onUpdate }: CampaignBudgetProps) {
   const [budgetType, setBudgetType] = useState("daily")
   const [budget, setBudget] = useState("50")
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date }>({
     from: new Date(),
     to: new Date(new Date().setDate(new Date().getDate() + 30)),
   })
+
+  const handleBudgetChange = (value: string) => {
+    setBudget(value)
+    onUpdate({ budget: Number(value), budgetType })
+  }
+
+  const handleBudgetTypeChange = (value: string) => {
+    setBudgetType(value)
+    onUpdate({ budget: Number(budget), budgetType: value })
+  }
 
   return (
     <div className="space-y-6">
@@ -32,7 +46,7 @@ export function CampaignBudget() {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <Label>Budget Type</Label>
-            <RadioGroup value={budgetType} onValueChange={setBudgetType} className="flex space-x-4">
+            <RadioGroup value={budgetType} onValueChange={handleBudgetTypeChange} className="flex space-x-4">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="daily" id="budget-daily" />
                 <Label htmlFor="budget-daily">Daily Budget</Label>
@@ -62,7 +76,7 @@ export function CampaignBudget() {
                 type="number"
                 placeholder="Enter amount"
                 value={budget}
-                onChange={(e) => setBudget(e.target.value)}
+                onChange={(e) => handleBudgetChange(e.target.value)}
               />
             </div>
             <p className="text-sm text-muted-foreground">

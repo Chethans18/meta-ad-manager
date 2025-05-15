@@ -18,7 +18,11 @@ interface ObjectiveOption {
   icon: React.ReactNode
 }
 
-export function CampaignObjective() {
+interface CampaignObjectiveProps {
+  onUpdate: (data: { name: string; objective: string }) => void
+}
+
+export function CampaignObjective({ onUpdate }: CampaignObjectiveProps) {
   const { campaignData, updateCampaignData } = useCampaign()
   const [campaignName, setCampaignName] = useState(campaignData.name)
   const [selectedObjective, setSelectedObjective] = useState(campaignData.objective)
@@ -65,12 +69,12 @@ export function CampaignObjective() {
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value
     setCampaignName(newName)
-    updateCampaignData('name', newName)
+    onUpdate({ name: newName, objective: selectedObjective })
   }
 
   const handleObjectiveChange = (value: string) => {
     setSelectedObjective(value)
-    updateCampaignData('objective', value)
+    onUpdate({ name: campaignName, objective: value })
   }
 
   return (

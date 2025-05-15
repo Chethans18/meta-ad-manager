@@ -15,10 +15,12 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { AudienceDashboard } from "@/components/audience-dashboard"
-import { api } from "@/lib/axios" 
+import api from "@/lib/axios"
+import { useAuth } from "@/context/auth-context"
 
 export default function ProfileSettingsPage() {
   const { toast } = useToast()
+  const { user, setUser } = useAuth()
   const [avatarUrl, setAvatarUrl] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -47,23 +49,35 @@ export default function ProfileSettingsPage() {
         return;
       }
 
-      const res = await api.get("/auth/me");
-      console.log("Profile data received:", res.data);
+      const res = await api.get("/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
-      if (!res.data.user) {
+      console.log("Profile API Response:", res.data);
+      
+      // Check if user data exists in the response
+      const userData = res.data.user || res.data;
+      if (!userData) {
         throw new Error("No user data received");
       }
 
       setProfileData({
-        firstName: res.data.user.firstName || "",
-        lastName: res.data.user.lastName || "",
-        email: res.data.user.email || "",
-        company: res.data.user.company || "",
-        role: res.data.user.role || "",
-        bio: res.data.user.bio || "",
-        timezone: res.data.user.timezone || "",
-        language: res.data.user.language || "en",
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        company: userData.company || "",
+        role: userData.role || "",
+        bio: userData.bio || "",
+        timezone: userData.timezone || "",
+        language: userData.language || "en",
       });
+
+      // Update auth context with latest user data
+      if (setUser) {
+        setUser(userData);
+      }
     } catch (error: any) {
       console.error("Profile fetch error:", error);
       toast({
@@ -109,6 +123,11 @@ export default function ProfileSettingsPage() {
     setIsLoading(true)
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
       const formData = new FormData()
 
       Object.entries(profileData).forEach(([key, value]) => {
@@ -119,11 +138,19 @@ export default function ProfileSettingsPage() {
         formData.append("avatar", avatarUrl)
       }
 
-      await api.put("/auth/update-profile", formData, {
+      const response = await api.put("/auth/update-profile", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
         },
       })
+
+      if (response.data.user) {
+        // Update auth context with new user data
+        if (setUser) {
+          setUser(response.data.user);
+        }
+      }
 
       toast({
         title: "Profile updated",

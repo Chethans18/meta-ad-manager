@@ -52,7 +52,7 @@ const userSchema = new Schema({
 })
 
 
-// Hash password before saving
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
@@ -61,7 +61,6 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Compare plain password with hashed one
 userSchema.methods.comparePassword = function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };

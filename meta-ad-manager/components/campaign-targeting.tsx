@@ -11,12 +11,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export function CampaignTargeting() {
+interface CampaignTargetingProps {
+  onUpdate: (data: any) => void
+}
+
+export function CampaignTargeting({ onUpdate }: CampaignTargetingProps) {
   const [targetingTab, setTargetingTab] = useState("demographics")
   const [ageRange, setAgeRange] = useState([18, 65])
   const [gender, setGender] = useState("all")
   const [locations, setLocations] = useState("")
   const [interests, setInterests] = useState("")
+
+  const handleAgeRangeChange = (value: number[]) => {
+    setAgeRange(value)
+    onUpdate({
+      ageRange: { min: value[0], max: value[1] },
+      gender,
+      locations: locations.split(',').map(loc => loc.trim()).filter(Boolean),
+      interests: interests.split(',').map(int => int.trim()).filter(Boolean)
+    })
+  }
+
+  const handleGenderChange = (value: string) => {
+    setGender(value)
+    onUpdate({
+      ageRange: { min: ageRange[0], max: ageRange[1] },
+      gender: value,
+      locations: locations.split(',').map(loc => loc.trim()).filter(Boolean),
+      interests: interests.split(',').map(int => int.trim()).filter(Boolean)
+    })
+  }
+
+  const handleLocationsChange = (value: string) => {
+    setLocations(value)
+    onUpdate({
+      ageRange: { min: ageRange[0], max: ageRange[1] },
+      gender,
+      locations: value.split(',').map(loc => loc.trim()).filter(Boolean),
+      interests: interests.split(',').map(int => int.trim()).filter(Boolean)
+    })
+  }
+
+  const handleInterestsChange = (value: string) => {
+    setInterests(value)
+    onUpdate({
+      ageRange: { min: ageRange[0], max: ageRange[1] },
+      gender,
+      locations: locations.split(',').map(loc => loc.trim()).filter(Boolean),
+      interests: value.split(',').map(int => int.trim()).filter(Boolean)
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -45,7 +89,7 @@ export function CampaignTargeting() {
                   min={13}
                   max={65}
                   step={1}
-                  onValueChange={(value) => setAgeRange(value as number[])}
+                  onValueChange={handleAgeRangeChange}
                   className="py-4"
                 />
               </div>
@@ -58,7 +102,7 @@ export function CampaignTargeting() {
               <CardDescription>Select the gender to target</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={gender} onValueChange={setGender} className="flex space-x-4">
+              <RadioGroup value={gender} onValueChange={handleGenderChange} className="flex space-x-4">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="all" id="gender-all" />
                   <Label htmlFor="gender-all">All</Label>
@@ -104,7 +148,7 @@ export function CampaignTargeting() {
                   id="locations"
                   placeholder="Enter locations (e.g. United States, Canada)"
                   value={locations}
-                  onChange={(e) => setLocations(e.target.value)}
+                  onChange={(e) => handleLocationsChange(e.target.value)}
                 />
               </div>
             </CardContent>
@@ -124,7 +168,7 @@ export function CampaignTargeting() {
                   id="interests"
                   placeholder="Enter interests (e.g. Technology, Fashion, Sports)"
                   value={interests}
-                  onChange={(e) => setInterests(e.target.value)}
+                  onChange={(e) => handleInterestsChange(e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">Separate multiple interests with commas</p>
               </div>

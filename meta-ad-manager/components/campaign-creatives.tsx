@@ -21,7 +21,11 @@ interface AdCreative {
   imageUrl: string
 }
 
-export function CampaignCreatives() {
+interface CampaignCreativesProps {
+  onUpdate: (data: AdCreative[]) => void
+}
+
+export function CampaignCreatives({ onUpdate }: CampaignCreativesProps) {
   const [adFormat, setAdFormat] = useState("single-image")
   const [creatives, setCreatives] = useState<AdCreative[]>([
     {
@@ -41,15 +45,23 @@ export function CampaignCreatives() {
       cta: "Shop Now",
       imageUrl: "/placeholder.svg?height=300&width=600",
     }
-    setCreatives([...creatives, newCreative])
+    const updatedCreatives = [...creatives, newCreative]
+    setCreatives(updatedCreatives)
+    onUpdate(updatedCreatives)
   }
 
   const removeCreative = (id: string) => {
-    setCreatives(creatives.filter((creative) => creative.id !== id))
+    const updatedCreatives = creatives.filter((creative) => creative.id !== id)
+    setCreatives(updatedCreatives)
+    onUpdate(updatedCreatives)
   }
 
   const updateCreative = (id: string, field: keyof AdCreative, value: string) => {
-    setCreatives(creatives.map((creative) => (creative.id === id ? { ...creative, [field]: value } : creative)))
+    const updatedCreatives = creatives.map((creative) => 
+      creative.id === id ? { ...creative, [field]: value } : creative
+    )
+    setCreatives(updatedCreatives)
+    onUpdate(updatedCreatives)
   }
 
   return (

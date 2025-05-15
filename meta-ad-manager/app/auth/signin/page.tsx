@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import {api} from "@/lib/axios"
+import api from "@/lib/axios"
 import { log } from "console"
 import { useAuth } from "@/context/auth-context"; 
 
@@ -35,7 +35,7 @@ export default function SignInPage() {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
 
-    // Clear error when user types
+    
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev }
@@ -74,14 +74,35 @@ export default function SignInPage() {
     }
 
     setIsLoading(true)
+    setErrors({});
 
      try {
     const response = await api.post("/auth/signin", {
       email: formData.email,
       password: formData.password,
     });
-    console.log("Sign in response:", response.data); // Debug log
-    login(response.data, response.data.token);
+    console.log("Sign in response:", response.data);//to debug
+          // Check if response has the expected structure like object
+      if (!response.data || typeof response.data !== 'object') {
+        console.error('Invalid response format:', response.data);
+        setErrors({ 
+          form: "Server error: Invalid response format. Please try again." 
+        });
+        return;
+      }
+
+      // Checking the  token in response 
+      if (!response.data.token) {
+        console.error('No token in response:', response.data);
+        setErrors({ 
+          form: "Server error: Authentication failed. Please check your credentials." 
+        });
+        return;
+      } //token storage
+        if (formData.rememberMe) {
+        localStorage.setItem('token', response.data.token);
+      }
+     await login(response.data, response.data.token);
     router.push("/");
   } catch (error) {
     console.error("Login error:", error);

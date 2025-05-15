@@ -1,9 +1,15 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useToast } from "@/hooks/use-toast"
+import api from "@/lib/axios"
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { CampaignBudget } from "@/components/campaign-budget"
 import { CampaignCreatives } from "@/components/campaign-creatives"
@@ -11,29 +17,35 @@ import { CampaignObjective } from "@/components/campaign-objective"
 import { CampaignTargeting } from "@/components/campaign-targeting"
 import { MainNav } from "@/components/main-nav"
 import { UserNav } from "@/components/user-nav"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AudienceDashboard } from "@/components/audience-dashboard"
+
+type CampaignCreative = {
+  id: string
+  imageUrl: string
+  text: string
+}
 
 export default function CreateCampaignPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("objective")
+  const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState('objective')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const [campaignData, setCampaignData] = useState({
-    name: "",
-    objective: "",
+    name: '',
+    objective: '',
     budget: 0,
-    budgetType: "daily",
+    budgetType: 'daily',
     startDate: new Date(),
     endDate: new Date(),
     targeting: {
       ageRange: { min: 18, max: 65 },
-      gender: "all",
+      gender: 'all',
       locations: [],
-      interests: []
+      interests: [],
     },
-    creatives: []
+    creatives: [] as CampaignCreative[],
   })
 
   const handleObjectiveUpdate = (data: { name: string; objective: string }) => {
@@ -48,56 +60,100 @@ export default function CreateCampaignPage() {
     setCampaignData(prev => ({ ...prev, budget: data.budget, budgetType: data.budgetType }))
   }
 
-  const handleCreativesUpdate = (data: any[]) => {
+  const handleCreativesUpdate = (data: CampaignCreative[]) => {
     setCampaignData(prev => ({ ...prev, creatives: data }))
   }
 
-  const handleNext = async () => {
+  const validateStep = () => {
     switch (activeTab) {
-      case "objective":
-        setActiveTab("targeting")
-        break
-      case "targeting":
-        setActiveTab("budget")
-        break
-      case "budget":
-        setActiveTab("creatives")
-        break
-      case "creatives":
-        try {
-          const response = await fetch('http://localhost:7000/api/campaigns', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(campaignData),
-            credentials: 'include',
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Campaign creation failed')
-          }
-
-          router.push('/campaigns')
-        } catch (error) {
-          console.error('Campaign creation error:', error)
-          // TODO: Add error handling UI
+      case 'objective':
+        if (!campaignData.name || !campaignData.objective) {
+          setError('Please fill in all required fields')
+          return false
         }
         break
+      case 'targeting':
+        if (!campaignData.targeting.locations.length) {
+          setError('Please select at least one location')
+          return false
+        }
+        break
+      case 'budget':
+        if (!campaignData.budget || campaignData.budget <= 0) {
+          setError('Please set a valid budget')
+          return false
+        }
+        break
+      case 'creatives':
+        if (!campaignData.creatives.length) {
+          setError('Please add at least one creative')
+          return false
+        }
+        break
+    }
+    return true
+  }
+
+  const handleNext = async () => {
+    setError(null)
+    
+    if (!validateStep()) {
+      return
+    }
+
+    if (activeTab === 'creatives') {
+      try {
+        setIsLoading(true)
+        const payload = {
+          ...campaignData,
+          startDate: campaignData.startDate.toISOString(),
+          endDate: campaignData.endDate.toISOString(),
+        }
+
+        const response = await api.post('/campaigns', payload)
+        
+        toast({
+          title: "Success",
+          description: "Campaign created successfully",
+        })
+        
+        router.push('/campaigns')
+      } catch (error: any) {
+        console.error('Campaign creation error:', error)
+        setError(error.response?.data?.message || 'Failed to create campaign')
+        toast({
+          title: "Error",
+          description: error.response?.data?.message || 'Failed to create campaign',
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    } else {
+      switch (activeTab) {
+        case 'objective':
+          setActiveTab('targeting')
+          break
+        case 'targeting':
+          setActiveTab('budget')
+          break
+        case 'budget':
+          setActiveTab('creatives')
+          break
+      }
     }
   }
 
   const handleBack = () => {
     switch (activeTab) {
-      case "targeting":
-        setActiveTab("objective")
+      case 'targeting':
+        setActiveTab('objective')
         break
-      case "budget":
-        setActiveTab("targeting")
+      case 'budget':
+        setActiveTab('targeting')
         break
-      case "creatives":
-        setActiveTab("budget")
+      case 'creatives':
+        setActiveTab('budget')
         break
     }
   }
@@ -116,55 +172,97 @@ export default function CreateCampaignPage() {
       <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Create Campaign</h2>
-          <Button variant="outline" asChild>
-            <Link href="/campaigns">Cancel</Link>
-          </Button>
         </div>
+        <Separator />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="objective">Objective</TabsTrigger>
+            <TabsTrigger value="targeting">Targeting</TabsTrigger>
+            <TabsTrigger value="budget">Budget</TabsTrigger>
+            <TabsTrigger value="creatives">Creatives</TabsTrigger>
+          </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Campaign Setup</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="objective">1. Objective</TabsTrigger>
-                <TabsTrigger value="targeting">2. Targeting</TabsTrigger>
-                <TabsTrigger value="budget">3. Budget</TabsTrigger>
-                <TabsTrigger value="creatives">4. Creatives</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="objective" className="py-6">
+          <TabsContent value="objective" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campaign Objective</CardTitle>
+                <CardDescription>Choose what you want to achieve with your campaign</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <CampaignObjective onUpdate={handleObjectiveUpdate} />
-              </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="targeting" className="py-6">
+          <TabsContent value="targeting" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campaign Targeting</CardTitle>
+                <CardDescription>Define your target audience</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <CampaignTargeting onUpdate={handleTargetingUpdate} />
-              </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="budget" className="py-6">
+          <TabsContent value="budget" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campaign Budget</CardTitle>
+                <CardDescription>Set your campaign budget and schedule</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <CampaignBudget onUpdate={handleBudgetUpdate} />
-              </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="creatives" className="py-6">
+          <TabsContent value="creatives" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Campaign Creatives</CardTitle>
+                <CardDescription>Create your ad content</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <CampaignCreatives onUpdate={handleCreativesUpdate} />
-              </TabsContent>
-            </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-            <Separator className="my-6" />
+        {error && (
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={handleBack} disabled={activeTab === "objective"}>
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <Button onClick={handleNext}>
-                {activeTab === "creatives" ? "Create Campaign" : "Next"}
-                {activeTab !== "creatives" && <ChevronRight className="ml-2 h-4 w-4" />}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-between items-center">
+          <Button 
+            onClick={handleBack} 
+            disabled={activeTab === 'objective'}
+            variant="outline"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+
+          <div className="flex gap-2">
+            <Button variant="outline">Save as Draft</Button>
+            <Button onClick={handleNext} disabled={isLoading}>
+              {isLoading ? (
+                "Creating..."
+              ) : activeTab === 'creatives' ? (
+                "Create Campaign"
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -2,13 +2,13 @@ import express from 'express';
 import { signUpUser, signInUser, updateProfile } from '../controllers/authController.js';
 import auth from '../middleware/auth.js'; // Make sure to use 'auth' middleware
 import User from '../models/User.js';
-import upload from '../middleware/upload.js';
+
 
 const router = express.Router();
 
 router.post('/signup', signUpUser);
 router.post('/signin', signInUser);
-router.put('/update-profile', auth, upload.single('avatar'), updateProfile);
+router.put('/update-profile', auth,  updateProfile);
 
 router.get('/me',auth, async (req, res) => { 
   try {
